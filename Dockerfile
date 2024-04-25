@@ -6,6 +6,8 @@ WORKDIR /cmd
 
 COPY . .
 
+RUN go mod download
+
 RUN go mod tidy
 
 CMD ["air"]
