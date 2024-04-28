@@ -11,12 +11,12 @@ func main() {
 
 	//gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
-	public := r.Group("/api")
 
+	public := r.Group("/api")
 	setupApiRoutes(public)
 
 	protected := r.Group("/api/admin")
-	protected.Use(middlewares.JwtAuthMiddleware())
+	protected.Use(middlewares.JwtAuthMiddleware(models.RoleAdmin))
 	setupApiAdminRoutes(protected)
 
 	err := r.Run()
