@@ -10,4 +10,9 @@ func setupApiRoutes(app *gin.RouterGroup) {
 	app.POST("/create-fact", handlers.CreateFact)
 
 	app.POST("/register", handlers.Register)
+	app.POST("/login", handlers.Login)
+}
+
+func setupApiAdminRoutes(app *gin.RouterGroup) {
+	app.GET("/user", handlers.CurrentUser)
 }

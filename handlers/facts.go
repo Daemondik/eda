@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"eda/database"
 	"eda/models"
 	"encoding/json"
 	"github.com/gin-gonic/gin"
@@ -11,7 +10,7 @@ import (
 
 func ListFacts(c *gin.Context) {
 	var facts []models.Fact
-	database.DB.Db.Find(&facts)
+	models.DB.Find(&facts)
 
 	c.JSON(http.StatusOK, facts)
 }
@@ -23,6 +22,6 @@ func CreateFact(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"msg": e.Error()})
 		return
 	}
-	database.DB.Db.Create(&fact)
+	models.DB.Create(&fact)
 	c.JSON(http.StatusOK, fact)
 }

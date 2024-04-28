@@ -1,17 +1,23 @@
 package main
 
 import (
-	"eda/database"
+	"eda/middlewares"
+	"eda/models"
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	database.ConnectDb()
+	models.ConnectDb()
 
+	//gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 	public := r.Group("/api")
 
 	setupApiRoutes(public)
+
+	protected := r.Group("/api/admin")
+	protected.Use(middlewares.JwtAuthMiddleware())
+	setupApiAdminRoutes(protected)
 
 	err := r.Run()
 	if err != nil {
