@@ -21,7 +21,7 @@ func JwtAuthMiddleware(role string) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		if role, _ := models.GetUserRole(userId); role != role {
+		if userRole, _ := models.GetUserRole(userId); role != userRole {
 			c.String(http.StatusForbidden, "Wrong role")
 			c.Abort()
 			return
