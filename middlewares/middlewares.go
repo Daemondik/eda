@@ -9,7 +9,7 @@ import (
 
 func JwtAuthMiddleware(role string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		err := token.TokenValid(c)
+		err := token.ValidToken(c)
 		if err != nil {
 			c.String(http.StatusUnauthorized, "Unauthorized")
 			c.Abort()
