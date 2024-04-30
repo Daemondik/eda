@@ -19,6 +19,12 @@ services:
       - "5432:5432"
     volumes:
       - postgres-db:/var/lib/postgresql/data
+#  redis:
+#    container_name: "redis"
+#    image: redis:alpine
+#    command: redis-server /usr/local/etc/redis/redis.conf --requirepass ${REDIS_PASSWORD}
+#    ports:
+#      - "6379:6379"
 
 volumes:
   postgres-db:

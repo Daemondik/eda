@@ -11,8 +11,14 @@ func setupApiRoutes(app *gin.RouterGroup) {
 
 	app.POST("/register", handlers.Register)
 	app.POST("/login", handlers.Login)
+
+	app.POST("/login-gl", handlers.GoogleLogin)
+	app.GET("/callback-gl", handlers.CallBackFromGoogle)
+
+	app.GET("/profile", handlers.Profile)
 }
 
 func setupApiAdminRoutes(app *gin.RouterGroup) {
 	app.GET("/user", handlers.CurrentUser)
+
 }
