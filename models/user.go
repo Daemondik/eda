@@ -54,6 +54,18 @@ func (u *User) SaveUser() (*User, error) {
 	}
 	return u, nil
 }
+func (u *User) IsEmailExist() (bool, error) {
+	var user User
+	err := DB.Model(User{}).Where("email = ?", u.Email).Take(&user).Error
+	if err != nil {
+		return true, err
+	}
+	if user == (User{}) {
+		return false, nil
+	} else {
+		return true, nil
+	}
+}
 
 func (u *User) BeforeSave(_ *gorm.DB) error {
 	//turn password into hash

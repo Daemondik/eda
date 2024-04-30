@@ -72,8 +72,16 @@ func Register(c *gin.Context) {
 	u.Email = input.Email
 	u.Password = input.Password
 
+	isEmailExist, err := u.IsEmailExist()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if isEmailExist {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Такой Email уже существует"})
+		return
+	}
 	_, err := u.SaveUser()
-
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
