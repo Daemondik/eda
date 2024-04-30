@@ -32,7 +32,7 @@ func GetUserByID(uid uint) (User, error) {
 	return u, nil
 }
 
-func GetUserRole(uid uint) (string, error) {
+func GetUserRoleById(uid uint) (string, error) {
 	var u User
 
 	if err := DB.First(&u, uid).Error; err != nil {

@@ -14,11 +14,9 @@ func setupApiRoutes(app *gin.RouterGroup) {
 
 	app.POST("/login-gl", handlers.GoogleLogin)
 	app.GET("/callback-gl", handlers.CallBackFromGoogle)
-
-	app.GET("/profile", handlers.Profile)
 }
 
 func setupApiAdminRoutes(app *gin.RouterGroup) {
 	app.GET("/user", handlers.CurrentUser)
-
+	//app.GET("/profile", handlers.Profile)
 }

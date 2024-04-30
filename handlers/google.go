@@ -69,30 +69,30 @@ func CallBackFromGoogle(c *gin.Context) {
 	http.SetCookie(c.Writer, &cookie)
 }
 
-func Profile(c *gin.Context) {
-	// Read access token from cookie
-	cookie, err := c.Request.Cookie("access_token")
-	if err != nil {
-		fmt.Println("Access token cookie not found.")
-		return
-	}
-
-	// Use access token to fetch user info
-	client := oauth2.NewClient(oauth2.NoContext, oauth2.StaticTokenSource(&oauth2.Token{AccessToken: cookie.Value}))
-	response, err := client.Get("https://www.googleapis.com/userinfo/v2/me")
-	if err != nil {
-		fmt.Printf("failed getting user info: %s\n", err.Error())
-		return
-	}
-	defer response.Body.Close()
-
-	// Display user info
-	c.String(http.StatusOK, "User Info:\n"+
-		"Status: %s\n"+
-		"Headers: %v\n", response.Status, response.Header)
-
-	// You may want to parse and display the response body here
-}
+//func Profile(c *gin.Context) {
+//	// Read access token from cookie
+//	cookie, err := c.Request.Cookie("access_token")
+//	if err != nil {
+//		fmt.Println("Access token cookie not found.")
+//		return
+//	}
+//
+//	// Use access token to fetch user info
+//	client := oauth2.NewClient(oauth2.NoContext, oauth2.StaticTokenSource(&oauth2.Token{AccessToken: cookie.Value}))
+//	response, err := client.Get("https://www.googleapis.com/userinfo/v2/me")
+//	if err != nil {
+//		fmt.Printf("failed getting user info: %s\n", err.Error())
+//		return
+//	}
+//	defer response.Body.Close()
+//
+//	// Display user info
+//	c.String(http.StatusOK, "User Info:\n"+
+//		"Status: %s\n"+
+//		"Headers: %v\n"+
+//		"Body: %v\n",
+//		response.Status, response.Header, response.Body)
+//}
 
 //func CallBackFromGoogle(c *gin.Context) {
 //	logger.Log.Info("Callback-gl..")

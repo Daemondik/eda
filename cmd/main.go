@@ -30,7 +30,7 @@ func main() {
 	setupApiRoutes(public)
 
 	protected := r.Group("/api/admin")
-	protected.Use(middlewares.JwtAuthMiddleware(models.RoleAdmin))
+	protected.Use(middlewares.AuthMiddleware(models.RoleAdmin))
 	setupApiAdminRoutes(protected)
 
 	err = r.Run()
