@@ -2,13 +2,13 @@ package handlers
 
 import (
 	"eda/models"
-	"eda/utils/token"
+	"eda/utils/security"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
 
 func CurrentUser(c *gin.Context) {
-	userId, err := token.ExtractTokenID(c)
+	userId, err := security.GetUserIdByJWTOrOauth(c)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

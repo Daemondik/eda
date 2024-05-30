@@ -32,6 +32,16 @@ func GetUserByID(uid uint) (User, error) {
 	return u, nil
 }
 
+func GetUserByEmail(email string) (User, error) {
+	var u User
+	err := DB.Model(User{}).Where("email = ?", email).Find(&u).Error
+	if err != nil {
+		return u, errors.New("user not found")
+	}
+
+	return u, nil
+}
+
 func GetUserRoleById(uid uint) (string, error) {
 	var u User
 
@@ -46,13 +56,13 @@ func (u *User) PrepareGive() {
 	u.Password = ""
 }
 
-func (u *User) SaveUser() (*User, error) {
+func (u *User) SaveUser() (User, error) {
 	var err error
 	err = DB.Create(&u).Error
 	if err != nil {
-		return &User{}, err
+		return User{}, err
 	}
-	return u, nil
+	return *u, nil
 }
 
 func (u *User) BeforeSave(_ *gorm.DB) error {

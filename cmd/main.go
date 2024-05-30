@@ -22,6 +22,7 @@ func main() {
 	}(logger.Log)
 
 	models.ConnectDb()
+	models.NewRedis()
 
 	//gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
