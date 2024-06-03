@@ -15,9 +15,11 @@ const RoleGuest = "guest"
 
 type User struct {
 	gorm.Model
-	Email    string `json:"email" gorm:"text;not null;unique"`
-	Password string `json:"password" gorm:"text;size:255;not null;"`
+	Phone    string `json:"phone" gorm:"text;unique"`
+	Email    string `json:"email" gorm:"text;unique"`
+	Password string `json:"password" gorm:"text;size:255"`
 	Role     string `json:"role" gorm:"text;not null;default:'guest'"`
+	IsActive bool   `json:"is_active" gorm:"bool;not null;default:false"`
 }
 
 func GetUserByID(uid uint) (User, error) {
@@ -35,6 +37,16 @@ func GetUserByID(uid uint) (User, error) {
 func GetUserByEmail(email string) (User, error) {
 	var u User
 	err := DB.Model(User{}).Where("email = ?", email).Find(&u).Error
+	if err != nil {
+		return u, errors.New("user not found")
+	}
+
+	return u, nil
+}
+
+func GetUserByPhone(phone string) (User, error) {
+	var u User
+	err := DB.Model(User{}).Where("phone = ?", phone).Find(&u).Error
 	if err != nil {
 		return u, errors.New("user not found")
 	}
@@ -65,6 +77,15 @@ func (u *User) SaveUser() (User, error) {
 	return *u, nil
 }
 
+func (u *User) SetActive() (User, error) {
+	var err error
+	err = DB.Model(User{}).Update("is_active", true).Error
+	if err != nil {
+		return User{}, err
+	}
+	return *u, nil
+}
+
 func (u *User) BeforeSave(_ *gorm.DB) error {
 	//turn password into hash
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
@@ -74,7 +95,7 @@ func (u *User) BeforeSave(_ *gorm.DB) error {
 	u.Password = string(hashedPassword)
 
 	//remove spaces in email
-	u.Email = html.EscapeString(strings.TrimSpace(u.Email))
+	u.Phone = html.EscapeString(strings.TrimSpace(u.Phone))
 
 	return nil
 }
@@ -83,12 +104,12 @@ func VerifyPassword(password, hashedPassword string) error {
 	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 }
 
-func LoginCheck(email string, password string) (string, error) {
+func LoginCheck(Phone string, password string) (string, error) {
 	var err error
 
 	u := User{}
 
-	err = DB.Model(User{}).Where("email = ?", email).Take(&u).Error
+	err = DB.Model(User{}).Where("phone = ?", Phone).Take(&u).Error
 
 	if err != nil {
 		return "", err

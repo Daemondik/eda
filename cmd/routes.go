@@ -10,6 +10,7 @@ func setupApiRoutes(app *gin.RouterGroup) {
 	app.POST("/create-fact", handlers.CreateFact)
 
 	app.POST("/register", handlers.Register)
+	app.POST("/confirm-sms", handlers.ConfirmSMSCode)
 	app.POST("/login", handlers.Login)
 
 	app.POST("/login-gl", handlers.GoogleLogin)

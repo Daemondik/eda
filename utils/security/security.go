@@ -5,6 +5,7 @@ import (
 	"eda/utils/token"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/oauth2"
+	"regexp"
 )
 
 func GetUserIdByJWTOrOauth(c *gin.Context) (uint, error) {
@@ -34,4 +35,13 @@ func GetUserIdByJWTOrOauth(c *gin.Context) (uint, error) {
 	}
 
 	return userId, nil
+}
+
+func IsValidRussianPhoneNumber(phone string) bool {
+	// +7 (XXX) XXX-XX-XX
+	pattern := `^\+7\s\(\d{3}\)\s\d{3}-\d{2}-\d{2}$`
+
+	r := regexp.MustCompile(pattern)
+
+	return r.MatchString(phone)
 }
