@@ -12,6 +12,7 @@ services:
     depends_on:
       - redis
       - db
+      - pdadmin
   db:
     image: postgres:alpine
     environment:
@@ -22,15 +23,26 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres-db:/var/lib/postgresql/data
+      - ./postgres-db:/var/lib/postgresql/data
   redis:
     image: redis:alpine
     restart: always
     ports:
       - "6379:6379"
-    command: /bin/sh -c "redis-server --requirepass $$REDIS_PASSWORD"
+    command: /bin/sh -c "redis-server --requirepass $REDIS_PASSWORD"
     env_file:
       - .env
+  pdadmin:
+    image: dpage/pgadmin4
+    env_file:
+      - .env
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PDADMIN_DEFAULT_EMAIL}
+      - PGADMIN_DEFAULT_PASSWORD=${PDADMIN_DEFAULT_PASSWORD}
+    ports:
+      - "80:80"
+    depends_on:
+      - db
 
 volumes:
   postgres-db:
