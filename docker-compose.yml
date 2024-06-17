@@ -1,18 +1,6 @@
 version: '3.8'
 
 services:
-  web:
-    build: .
-    env_file:
-      - .env
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./:/cmd
-    depends_on:
-      - redis
-      - db
-      - pdadmin
   db:
     image: postgres:alpine
     environment:
@@ -24,6 +12,12 @@ services:
       - "5432:5432"
     volumes:
       - ./postgres-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   redis:
     image: redis:alpine
     restart: always
@@ -32,6 +26,12 @@ services:
     command: /bin/sh -c "redis-server --requirepass $REDIS_PASSWORD"
     env_file:
       - .env
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   pdadmin:
     image: dpage/pgadmin4
     env_file:
@@ -43,6 +43,43 @@ services:
       - "80:80"
     depends_on:
       - db
+
+  rabbitmq:
+    image: "rabbitmq:3-management"
+    hostname: rabbitmq
+    restart: always
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+      - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-rabbit log_levels [{connection,error},{default,error}] disk_free_limit 2147483648
+    volumes:
+      - ./rabbitmq:/var/lib/rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmqctl status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./:/cmd
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      pdadmin:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
 
 volumes:
   postgres-db:

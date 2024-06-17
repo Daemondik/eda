@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"log"
+	"os"
 )
 
 func main() {
@@ -14,12 +15,14 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to initialize logger:", err)
 	}
-	defer func(Log *zap.Logger) {
-		err := Log.Sync()
-		if err != nil {
-			log.Fatal("Failed to sync logger:", err)
-		}
-	}(logger.Log)
+	if os.Getenv("LOGGER_OUTPUT_PATH") != "" {
+		defer func(Log *zap.Logger) {
+			err := Log.Sync()
+			if err != nil {
+				log.Printf("Failed to sync logger:", err)
+			}
+		}(logger.Log)
+	}
 
 	models.ConnectDb()
 	models.NewRedis()
@@ -33,6 +36,13 @@ func main() {
 	protected := r.Group("/api/admin")
 	protected.Use(middlewares.AuthMiddleware(models.RoleAdmin))
 	setupApiAdminRoutes(protected)
+
+	ws := r.Group("/ws")
+	setupWebsocketRoutes(ws)
+
+	r.LoadHTMLGlob("front/templates/*")
+	front := r.Group("/")
+	setupFrontRoutes(front)
 
 	err = r.Run()
 	if err != nil {

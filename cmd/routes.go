@@ -3,6 +3,7 @@ package main
 import (
 	"eda/handlers"
 	"github.com/gin-gonic/gin"
+	"net/http"
 )
 
 func setupApiRoutes(app *gin.RouterGroup) {
@@ -20,4 +21,16 @@ func setupApiRoutes(app *gin.RouterGroup) {
 func setupApiAdminRoutes(app *gin.RouterGroup) {
 	app.GET("/user", handlers.CurrentUser)
 	//app.GET("/profile", handlers.Profile)
+}
+
+func setupWebsocketRoutes(app *gin.RouterGroup) {
+	app.GET("/chat", func(c *gin.Context) {
+		handlers.Chat(c.Writer, c.Request)
+	})
+}
+
+func setupFrontRoutes(app *gin.RouterGroup) {
+	app.GET("/", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "index.html", nil)
+	})
 }

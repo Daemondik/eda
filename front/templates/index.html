@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Чат</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        #messages { list-style-type: none; padding: 0; }
+        #messages li { padding: 5px 10px; }
+        #input { margin-top: 10px; }
+    </style>
+    <script>
+        let ws;
+
+        function connect() {
+            ws = new WebSocket('ws://localhost:8080/ws');
+
+            ws.onmessage = function(event) {
+                var messages = document.getElementById('messages');
+                var message = document.createElement('li');
+                var content = document.createTextNode(event.data);
+                message.appendChild(content);
+                messages.appendChild(message);
+            };
+
+            ws.onopen = function(event) {
+                document.getElementById('status').textContent = 'Соединено';
+            };
+
+            ws.onclose = function(event) {
+                document.getElementById('status').textContent = 'Не соединено';
+            };
+        }
+
+        function sendMessage() {
+            let input = document.getElementById('input');
+            ws.send(input.value);
+            input.value = '';
+        }
+    </script>
+</head>
+<body onload="connect();">
+<ul id="messages"></ul>
+<input type="text" id="input" onkeypress="if(event.keyCode === 13) { sendMessage(); }">
+<button onclick="sendMessage();">Отправить</button>
+<div id="status">Не соединено</div>
+</body>
+</html>
