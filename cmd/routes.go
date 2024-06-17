@@ -24,13 +24,13 @@ func setupApiAdminRoutes(app *gin.RouterGroup) {
 }
 
 func setupWebsocketRoutes(app *gin.RouterGroup) {
-	app.GET("/chat", func(c *gin.Context) {
-		handlers.Chat(c.Writer, c.Request)
-	})
+	app.GET("/chat/:user_id", handlers.Chat)
 }
 
 func setupFrontRoutes(app *gin.RouterGroup) {
-	app.GET("/", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.html", nil)
+	app.GET("/chat/:user_id", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "chat.tmpl", gin.H{
+			"user_id": c.Param("user_id"),
+		})
 	})
 }

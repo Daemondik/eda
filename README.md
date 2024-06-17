@@ -41,7 +41,7 @@ POST localhost:8080/api/register
 После регистрации вы получите смс с кодом подтверждения. Отправьте этот код на:
 
 ```bash
-localhost:8080/api/confirm-sms
+POST localhost:8080/api/confirm-sms
 ```
 с таким телом запроса:
 

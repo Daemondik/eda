@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Чат</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+        #chat { list-style-type: none; margin: 0; padding: 0; }
+        #chat li { padding: 5px 10px; }
+        #message { margin-top: 10px; }
+    </style>
+</head>
+<body>
+<ul id="chat"></ul>
+<input type="text" id="message" autocomplete="off" placeholder="Введите сообщение"/>
+<script>
+    var ws;
+    function connect() {
+        ws = new WebSocket('ws://localhost:8080/ws/chat/{{ .user_id }}'); // Замените USER_ID на уникальный идентификатор пользователя
+
+        ws.onmessage = function(event) {
+            var messages = document.getElementById('chat');
+            var message = document.createElement('li');
+            message.textContent = event.data;
+            messages.appendChild(message);
+        };
+
+        ws.onclose = function() {
+            console.log('Соединение закрыто, пытаемся переподключиться');
+            setTimeout(connect, 1000);
+        };
+    }
+
+    connect();
+
+    document.getElementById('message').onkeypress = function(e) {
+        if (e.keyCode === 13 && this.value) {
+            ws.send(this.value);
+            this.value = '';
+        }
+    };
+</script>
+</body>
+</html>
