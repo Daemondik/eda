@@ -52,5 +52,31 @@ POST localhost:8080/api/confirm-sms
 }
 ```
 
+### Чат в реальном времени на Websocket & RabbitMQ
+
+- Авторизуйтесь через смс или Google
+- Перейдите в браузере по ссылке `http://localhost:8080/chat/<id пользователя, которому пишем>`
+
+## GUI
+
+### pgAdmin
+
+- Перейдите в браузере по ссылке `http://localhost/`
+- Авторизуйтесь. Емейл и пароль указаны в `.env`
+- Выполните `docker ps`, найдите IMAGE с NAME `eda-db-1`, скопируйте CONTAINER ID
+- Выполните `docker inspect <CONTAINER ID>`, найдите `Gatevay` и скопируйте значение
+- Используйте это значение как хост для подключения к базе данных. Остальные значения можно найти в `.env`
+
+### RabbitMQ
+
+- Перейдите в браузере по ссылке `http://localhost:15672/`
+- Имя пользователя и пароль в `.env`
+
+### Redis
+
+- Скачайте любой Redis GUI, например RESP.app 
+- Ссылка для подключения `redis://localhost:6379`
+- Пароль в `.env`
+
 Автор:
 Батов Григорий - [Daemondik](https://github.com/Daemondik)
