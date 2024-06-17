@@ -38,7 +38,7 @@ func Chat(w http.ResponseWriter, r *http.Request) {
 			}
 			err = ch.Publish(
 				"",
-				"chat",
+				models.ChatQueue,
 				false,
 				false,
 				amqp.Publishing{
