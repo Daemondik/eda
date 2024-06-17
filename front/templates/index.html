@@ -13,7 +13,7 @@
         let ws;
 
         function connect() {
-            ws = new WebSocket('ws://localhost:8080/ws');
+            ws = new WebSocket('ws://localhost:8080/ws/chat');
 
             ws.onmessage = function(event) {
                 var messages = document.getElementById('messages');
