@@ -72,6 +72,8 @@ func CallBackFromGoogle(c *gin.Context) {
 		return
 	}
 	if u.ID == 0 {
+		u.Email = profile.Email
+		u.IsActive = true
 		u, err = u.SaveUser()
 		if err != nil {
 			logger.Log.Error("Saving User: " + err.Error() + "\n")
@@ -82,7 +84,7 @@ func CallBackFromGoogle(c *gin.Context) {
 
 	// Set a cookie with the access token
 	expiration := time.Now().Add(24 * time.Hour) // Adjust expiration as needed
-	cookie := http.Cookie{Name: "access_token", Value: token.AccessToken, Expires: expiration}
+	cookie := http.Cookie{Name: "access_token", Value: token.AccessToken, Expires: expiration, Path: "/"}
 	http.SetCookie(c.Writer, &cookie)
 
 	status := models.RedisClient.Set(token.AccessToken, strconv.Itoa(int(u.ID)), expiration.Sub(time.Now()))

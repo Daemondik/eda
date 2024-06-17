@@ -2,17 +2,20 @@ package handlers
 
 import (
 	"eda/models"
+	"eda/utils/security"
+	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/streadway/amqp"
 	"log"
 	"net/http"
+	"strconv"
 	"sync"
 )
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
-		return true
+		return r.Host == "localhost:8080"
 	},
 }
 
@@ -25,7 +28,31 @@ var clients = make(map[string]*Client)
 var mutex = &sync.Mutex{}
 
 func Chat(c *gin.Context) {
-	id := c.Param("user_id")
+	id := c.Param("recipient_id")
+	recipientId, err := strconv.Atoi(id)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	senderId, err := security.GetUserIdByJWTOrOauth(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Пользователь не авторизирован"})
+		return
+	}
+
+	sender, err := models.GetUserByID(senderId)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	recipient, err := models.GetUserByID(uint(recipientId))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		log.Print("Ошибка при подключении WebSocket:", err)
@@ -40,18 +67,24 @@ func Chat(c *gin.Context) {
 		return
 	}
 
-	client := &Client{conn: conn, id: id}
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	if _, exists := clients[id]; exists {
+		conn.Close()
+		log.Println("Клиент уже существует")
+		return
+	}
+
+	client := &Client{conn: conn, id: strconv.Itoa(int(senderId))}
 	clients[id] = client
-	mutex.Unlock()
 
 	channel, err := models.RabbitMQQueue(models.ChatQueue)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	//defer channel.Close()
 
-	// Чтение сообщений от пользователя
 	go func() {
 		defer func() {
 			conn.Close()
@@ -67,15 +100,26 @@ func Chat(c *gin.Context) {
 				break
 			}
 
-			// Отправка сообщения в RabbitMQ
+			message := models.Message{
+				Text:      string(msg),
+				Sender:    sender,
+				Recipient: recipient,
+			}
+
+			encodedMessage, err := encodeMessage(message)
+			if err != nil {
+				log.Print("Ошибка при подключении WebSocket:", err)
+				return
+			}
+
 			err = channel.Publish(
-				"",               // exchange
-				models.ChatQueue, // routing key
-				false,            // mandatory
-				false,            // immediate
+				"",
+				models.ChatQueue,
+				false,
+				false,
 				amqp.Publishing{
 					ContentType: "text/plain",
-					Body:        msg,
+					Body:        encodedMessage,
 				})
 			if err != nil {
 				log.Println("Ошибка отправки сообщения:", err)
@@ -87,17 +131,16 @@ func Chat(c *gin.Context) {
 		mutex.Unlock()
 	}()
 
-	// Потребление сообщений из RabbitMQ и отправка пользователям
 	go func() {
 		defer channel.Close()
 		msgs, err := channel.Consume(
-			models.ChatQueue, // queue
-			"",               // consumer
-			true,             // auto-ack
-			false,            // exclusive
-			false,            // no-local
-			false,            // no-wait
-			nil,              // args
+			models.ChatQueue,
+			"",
+			true,
+			false,
+			false,
+			false,
+			nil,
 		)
 		if err != nil {
 			log.Println(err)
@@ -116,4 +159,13 @@ func Chat(c *gin.Context) {
 			mutex.Unlock()
 		}
 	}()
+}
+
+func encodeMessage(message models.Message) ([]byte, error) {
+	encoded, err := json.Marshal(message)
+	if err != nil {
+		log.Printf("Ошибка при кодировании сообщения: %v", err)
+		return nil, err
+	}
+	return encoded, nil
 }

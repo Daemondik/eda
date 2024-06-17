@@ -15,8 +15,8 @@ const RoleGuest = "guest"
 
 type User struct {
 	gorm.Model
-	Phone    string `json:"phone" gorm:"text;unique"`
-	Email    string `json:"email" gorm:"text;unique"`
+	Phone    string `json:"phone" gorm:"text"`
+	Email    string `json:"email" gorm:"text"`
 	Password string `json:"password" gorm:"text;size:255"`
 	Role     string `json:"role" gorm:"text;not null;default:'guest'"`
 	IsActive bool   `json:"is_active" gorm:"bool;not null;default:false"`
@@ -25,7 +25,7 @@ type User struct {
 func GetUserByID(uid uint) (User, error) {
 	var u User
 
-	if err := DB.First(&u, uid).Error; err != nil {
+	if err := DB.First(&u, uid).Where("is_active = true").Error; err != nil {
 		return u, errors.New("user not found")
 	}
 
@@ -36,7 +36,7 @@ func GetUserByID(uid uint) (User, error) {
 
 func GetUserByEmail(email string) (User, error) {
 	var u User
-	err := DB.Model(User{}).Where("email = ?", email).Find(&u).Error
+	err := DB.Model(User{}).Where("email = ? AND is_active = true", email).Find(&u).Error
 	if err != nil {
 		return u, errors.New("user not found")
 	}
@@ -46,7 +46,7 @@ func GetUserByEmail(email string) (User, error) {
 
 func GetUserByPhone(phone string) (User, error) {
 	var u User
-	err := DB.Model(User{}).Where("phone = ?", phone).Find(&u).Error
+	err := DB.Model(User{}).Where("phone = ? AND is_active = true", phone).Find(&u).Error
 	if err != nil {
 		return u, errors.New("user not found")
 	}

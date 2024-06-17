@@ -13,11 +13,10 @@ func GetUserIdByJWTOrOauth(c *gin.Context) (uint, error) {
 	var err error
 
 	cookie, err := c.Request.Cookie("access_token")
+	if err != nil {
+		return 0, err
+	}
 	if cookie.Value != "" {
-		if err != nil {
-			return 0, err
-		}
-
 		client := oauth2.NewClient(oauth2.NoContext, oauth2.StaticTokenSource(&oauth2.Token{AccessToken: cookie.Value}))
 		response, err := client.Get("https://www.googleapis.com/userinfo/v2/me")
 		if err != nil {
@@ -25,7 +24,10 @@ func GetUserIdByJWTOrOauth(c *gin.Context) (uint, error) {
 		}
 		defer response.Body.Close()
 
-		userValue, _ := models.RedisClient.Get(cookie.Value).Uint64()
+		userValue, err := models.RedisClient.Get(cookie.Value).Uint64()
+		if err != nil {
+			return 0, err
+		}
 		userId = uint(userValue)
 	} else {
 		userId, err = token.ExtractTokenID(c)

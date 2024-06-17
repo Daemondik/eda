@@ -24,7 +24,7 @@ func setupApiAdminRoutes(app *gin.RouterGroup) {
 }
 
 func setupWebsocketRoutes(app *gin.RouterGroup) {
-	app.GET("/chat/:user_id", handlers.Chat)
+	app.GET("/chat/:recipient_id", handlers.Chat)
 }
 
 func setupFrontRoutes(app *gin.RouterGroup) {

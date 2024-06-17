@@ -9,8 +9,3 @@ type Fact struct {
 	Question string `json:"question" gorm:"text;not null;default:null"`
 	Answer   string `json:"answer" gorm:"text;not null;default:null"`
 }
-
-type Message struct {
-	gorm.Model
-	Content string
-}
