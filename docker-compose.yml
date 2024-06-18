@@ -80,6 +80,12 @@ services:
         condition: service_started
       rabbitmq:
         condition: service_healthy
+  qodana:
+    image: jetbrains/qodana:latest
+    volumes:
+      - ./:/data/project
+      - ./qodana-results:/data/results
+    command: --show-report
 
 volumes:
   postgres-db:
