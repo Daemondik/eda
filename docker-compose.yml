@@ -64,13 +64,16 @@ services:
       retries: 5
 
   web:
-    build: .
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
     env_file:
       - .env
     ports:
       - "8080:8080"
     volumes:
-      - ./:/cmd
+      - .:/app
+    command: sh -c "cd /app/cmd && air"
     depends_on:
       redis:
         condition: service_healthy
@@ -80,12 +83,28 @@ services:
         condition: service_started
       rabbitmq:
         condition: service_healthy
-  qodana:
-    image: jetbrains/qodana:latest
+  go_sql:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile-go-sql
+    env_file:
+      - .env
+    ports:
+      - "8082:8082"
     volumes:
-      - ./:/data/project
-      - ./qodana-results:/data/results
-    command: --show-report
+      - .:/app
+    command: sh -c "cd /app/cmd/sql && air"
+    depends_on:
+      db:
+        condition: service_healthy
+      pdadmin:
+        condition: service_started
+#  qodana:
+#    image: jetbrains/qodana:latest
+#    volumes:
+#      - ./:/data/project
+#      - ./qodana-results:/data/results
+#    command: --show-report
 
 volumes:
   postgres-db:

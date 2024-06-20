@@ -3,3 +3,5 @@
 /postgres-db/
 /rabbitmq/
 /qodana-results/
+/cmd/tmp/
+/cmd/sql/tmp/

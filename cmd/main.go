@@ -5,23 +5,13 @@ import (
 	"eda/middlewares"
 	"eda/models"
 	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
 	"log"
-	"os"
 )
 
 func main() {
 	err := logger.InitializeZapCustomLogger()
 	if err != nil {
 		log.Fatal("Failed to initialize logger:", err)
-	}
-	if os.Getenv("LOGGER_OUTPUT_PATH") != "" {
-		defer func(Log *zap.Logger) {
-			err := Log.Sync()
-			if err != nil {
-				log.Printf("Failed to sync logger:", err)
-			}
-		}(logger.Log)
 	}
 
 	models.ConnectDb()
@@ -40,7 +30,7 @@ func main() {
 	ws := r.Group("/ws")
 	setupWebsocketRoutes(ws)
 
-	r.LoadHTMLGlob("front/templates/*")
+	r.LoadHTMLGlob("../front/templates/*")
 	front := r.Group("/")
 	setupFrontRoutes(front)
 
