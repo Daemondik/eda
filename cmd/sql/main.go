@@ -4,6 +4,7 @@ import (
 	"eda/models"
 	"gorm.io/gorm"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,7 +15,7 @@ func main() {
 
 	err := executeSQLScripts(models.DB, "../../sql")
 	if err != nil {
-		panic(err)
+		log.Fatalf("Ошибка выполнения SQL-скриптов: %v", err)
 	}
 }
 
@@ -36,14 +37,11 @@ func executeSQLScripts(db *gorm.DB, path string) error {
 				return err
 			}
 
-			if err != nil {
-				return err
-			}
-
 			result := db.Exec(string(content))
 			if result.Error != nil {
 				return result.Error
 			}
+			log.Printf("Успешно выполнен SQL-скрипт: %s", info.Name())
 		}
 
 		return nil

@@ -7,9 +7,6 @@ import (
 )
 
 func setupApiRoutes(app *gin.RouterGroup) {
-	app.GET("/fact-list", handlers.ListFacts)
-	app.POST("/create-fact", handlers.CreateFact)
-
 	app.POST("/register", handlers.Register)
 	app.POST("/confirm-sms", handlers.ConfirmSMSCode)
 	app.POST("/login", handlers.Login)
@@ -20,7 +17,6 @@ func setupApiRoutes(app *gin.RouterGroup) {
 
 func setupApiAdminRoutes(app *gin.RouterGroup) {
 	app.GET("/user", handlers.CurrentUser)
-	//app.GET("/profile", handlers.Profile)
 }
 
 func setupWebsocketRoutes(app *gin.RouterGroup) {

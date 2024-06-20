@@ -17,7 +17,7 @@ func GetUserIdByJWTOrOauth(c *gin.Context) (uint, error) {
 		return 0, err
 	}
 	if cookie.Value != "" {
-		client := oauth2.NewClient(oauth2.NoContext, oauth2.StaticTokenSource(&oauth2.Token{AccessToken: cookie.Value}))
+		client := oauth2.NewClient(c.Request.Context(), oauth2.StaticTokenSource(&oauth2.Token{AccessToken: cookie.Value}))
 		response, err := client.Get("https://www.googleapis.com/userinfo/v2/me")
 		if err != nil {
 			return 0, err

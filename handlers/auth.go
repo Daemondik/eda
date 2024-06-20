@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"crypto/rand"
 	"eda/logger"
 	"eda/models"
 	"eda/utils/security"
@@ -8,7 +9,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"io"
-	"math/rand"
+	"math/big"
 	"net/http"
 	"os"
 	"time"
@@ -92,7 +93,7 @@ func Register(c *gin.Context) {
 	var err error
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -103,9 +104,14 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	code := rand.Int() + rand.Int() + rand.Int() + rand.Int()
+	n, err := rand.Int(rand.Reader, big.NewInt(9000))
+	if err != nil {
+		c.String(http.StatusInternalServerError, fmt.Sprintf("code generation error: %s", err.Error()))
+		return
+	}
+	code := n.Int64() + 1000
 
-	url := fmt.Sprintf("https://sms.ru/sms/send?api_id=%s&to=%s&msg=Code: %d&json=1&test=1", os.Getenv("SMS_API_KEY"), input.Phone, code)
+	url := fmt.Sprintf("https://sms.ru/sms/send?api_id=%s&to=%s&msg=Code: %d&json=1&test=%s", os.Getenv("SMS_API_KEY"), input.Phone, code, os.Getenv("SMS_IS_TEST"))
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -162,11 +168,15 @@ func ConfirmSMSCode(c *gin.Context) {
 		return
 	}
 
-	currentCode := models.RedisClient.Get(input.Phone)
-	models.RedisClient.Del(input.Phone)
+	currentCode, err := models.GetDelPhoneTransaction(input.Phone)
+	if err != nil {
+		logger.Log.Error("get code: " + err.Error() + "\n")
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
 
-	if input.Code != currentCode.String() {
-		c.String(http.StatusBadRequest, "incorrect code")
+	if input.Code != currentCode {
+		c.String(http.StatusInternalServerError, "incorrect code")
 		return
 	}
 

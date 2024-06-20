@@ -4,7 +4,6 @@ import (
 	"eda/logger"
 	"eda/models"
 	"encoding/json"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -27,21 +26,21 @@ var (
 )
 
 func GoogleLogin(c *gin.Context) {
-	url := oauthConfGl.AuthCodeURL(oauthStateStringGl)
-	c.JSON(http.StatusOK, gin.H{"url": url})
+	authCodeURL := oauthConfGl.AuthCodeURL(oauthStateStringGl)
+	c.JSON(http.StatusOK, gin.H{"url": authCodeURL})
 }
 
 func CallBackFromGoogle(c *gin.Context) {
 	state := c.Query("state")
 	if state != oauthStateStringGl {
-		fmt.Printf("invalid oauth state, expected '%s', got '%s'\n", oauthStateStringGl, state)
+		logger.Log.Error("invalid oauth state, expected '" + oauthStateStringGl + "', got '" + state + "'\n")
 		return
 	}
 
 	code := c.Query("code")
-	token, err := oauthConfGl.Exchange(oauth2.NoContext, code)
+	token, err := oauthConfGl.Exchange(c.Request.Context(), code)
 	if err != nil {
-		fmt.Printf("code exchange failed: %s\n", err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "code exchange failed:" + err.Error()})
 		return
 	}
 
@@ -84,7 +83,7 @@ func CallBackFromGoogle(c *gin.Context) {
 
 	// Set a cookie with the access token
 	expiration := time.Now().Add(24 * time.Hour) // Adjust expiration as needed
-	cookie := http.Cookie{Name: "access_token", Value: token.AccessToken, Expires: expiration, Path: "/"}
+	cookie := http.Cookie{Name: "access_token", Value: token.AccessToken, Expires: expiration, Path: "/", Secure: true, HttpOnly: true}
 	http.SetCookie(c.Writer, &cookie)
 
 	status := models.RedisClient.Set(token.AccessToken, strconv.Itoa(int(u.ID)), expiration.Sub(time.Now()))

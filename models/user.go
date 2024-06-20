@@ -4,7 +4,6 @@ import (
 	"eda/utils/token"
 	"errors"
 	"golang.org/x/crypto/bcrypt"
-	"golang.org/x/net/html"
 	"gorm.io/gorm"
 	"strings"
 )
@@ -24,13 +23,10 @@ type User struct {
 
 func GetUserByID(uid uint) (User, error) {
 	var u User
-
-	if err := DB.First(&u, uid).Where("is_active = true").Error; err != nil {
-		return u, errors.New("user not found")
+	if err := DB.Where("is_active = true").First(&u, uid).Error; err != nil {
+		return User{}, errors.New("user not found")
 	}
-
 	u.PrepareGive()
-
 	return u, nil
 }
 
@@ -56,11 +52,9 @@ func GetUserByPhone(phone string) (User, error) {
 
 func GetUserRoleById(uid uint) (string, error) {
 	var u User
-
 	if err := DB.First(&u, uid).Error; err != nil {
-		return u.Role, errors.New("user not found")
+		return "", errors.New("user not found")
 	}
-
 	return u.Role, nil
 }
 
@@ -87,16 +81,12 @@ func (u *User) SetActive() (User, error) {
 }
 
 func (u *User) BeforeSave(_ *gorm.DB) error {
-	//turn password into hash
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
 	u.Password = string(hashedPassword)
-
-	//remove spaces in email
-	u.Phone = html.EscapeString(strings.TrimSpace(u.Phone))
-
+	u.Phone = strings.TrimSpace(u.Phone)
 	return nil
 }
 
@@ -104,28 +94,20 @@ func VerifyPassword(password, hashedPassword string) error {
 	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 }
 
-func LoginCheck(Phone string, password string) (string, error) {
+func LoginCheck(phone string, password string) (string, error) {
 	var err error
-
 	u := User{}
-
-	err = DB.Model(User{}).Where("phone = ?", Phone).Take(&u).Error
-
+	err = DB.Model(User{}).Where("phone = ?", phone).Take(&u).Error
 	if err != nil {
 		return "", err
 	}
-
 	err = VerifyPassword(password, u.Password)
-
-	if err != nil && err == bcrypt.ErrMismatchedHashAndPassword {
+	if err != nil && errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
 		return "", err
 	}
-
 	generatedToken, err := token.GenerateToken(u.ID)
-
 	if err != nil {
 		return "", err
 	}
-
 	return generatedToken, nil
 }

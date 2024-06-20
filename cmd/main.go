@@ -5,19 +5,37 @@ import (
 	"eda/middlewares"
 	"eda/models"
 	"github.com/gin-gonic/gin"
-	"log"
+	"go.uber.org/zap"
 )
 
 func main() {
-	err := logger.InitializeZapCustomLogger()
-	if err != nil {
-		log.Fatal("Failed to initialize logger:", err)
+	if err := initializeServices(); err != nil {
+		logger.Log.Fatal("Failed to initialize services: ", zap.Error(err))
 	}
 
-	models.ConnectDb()
-	models.NewRedis()
+	r := setupRouter()
+	if err := r.Run(); err != nil {
+		logger.Log.Fatal("Failed to run the server:", zap.Error(err))
+	}
+}
 
-	//gin.SetMode(gin.ReleaseMode)
+func initializeServices() error {
+	if err := logger.InitializeZapCustomLogger(); err != nil {
+		return err
+	}
+
+	if err := models.ConnectDb(); err != nil {
+		return err
+	}
+
+	if err := models.NewRedis(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func setupRouter() *gin.Engine {
 	r := gin.Default()
 
 	public := r.Group("/api")
@@ -34,8 +52,5 @@ func main() {
 	front := r.Group("/")
 	setupFrontRoutes(front)
 
-	err = r.Run()
-	if err != nil {
-		return
-	}
+	return r
 }

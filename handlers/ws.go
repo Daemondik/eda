@@ -1,12 +1,14 @@
 package handlers
 
 import (
+	"eda/logger"
 	"eda/models"
 	"eda/utils/security"
 	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/streadway/amqp"
+	"go.uber.org/zap"
 	"log"
 	"net/http"
 	"strconv"
@@ -55,17 +57,17 @@ func Chat(c *gin.Context) {
 
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		log.Print("Ошибка при подключении WebSocket:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка при подключении WebSocket"})
 		return
 	}
 
 	mutex.Lock()
 	if len(clients) >= 2 {
 		conn.Close()
-		mutex.Unlock()
 		log.Println("Превышено количество пользователей")
 		return
 	}
+	mutex.Unlock()
 
 	mutex.Lock()
 	defer mutex.Unlock()
@@ -108,7 +110,7 @@ func Chat(c *gin.Context) {
 
 			encodedMessage, err := encodeMessage(message)
 			if err != nil {
-				log.Print("Ошибка при подключении WebSocket:", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка при подключении WebSocket"})
 				return
 			}
 
@@ -122,7 +124,7 @@ func Chat(c *gin.Context) {
 					Body:        encodedMessage,
 				})
 			if err != nil {
-				log.Println("Ошибка отправки сообщения:", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка отправки сообщения"})
 				break
 			}
 		}
@@ -143,7 +145,8 @@ func Chat(c *gin.Context) {
 			nil,
 		)
 		if err != nil {
-			log.Println(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
 		}
 
 		for d := range msgs {
@@ -164,7 +167,7 @@ func Chat(c *gin.Context) {
 func encodeMessage(message models.Message) ([]byte, error) {
 	encoded, err := json.Marshal(message)
 	if err != nil {
-		log.Printf("Ошибка при кодировании сообщения: %v", err)
+		logger.Log.Error("Ошибка при кодировании сообщения: ", zap.Error(err))
 		return nil, err
 	}
 	return encoded, nil

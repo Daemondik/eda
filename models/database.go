@@ -1,17 +1,18 @@
 package models
 
 import (
+	zapLogger "eda/logger"
 	"fmt"
+	"go.uber.org/zap"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-	"log"
 	"os"
 )
 
 var DB *gorm.DB
 
-func ConnectDb() {
+func ConnectDb() error {
 	dsn := fmt.Sprintf(
 		"host=db user=%s password=%s dbname=%s port=5432 sslmode=disable TimeZone=Europe/moscow",
 		os.Getenv("DB_USER"),
@@ -23,15 +24,20 @@ func ConnectDb() {
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),
 	})
-
 	if err != nil {
-		log.Fatal("Failed to connect to database. \n", err)
-		os.Exit(2)
+		zapLogger.Log.Error("Failed to connect to database", zap.Error(err))
+		return err
 	}
 
-	log.Println("connected")
+	zapLogger.Log.Info("Successfully connected to the database")
 	DB.Logger = logger.Default.LogMode(logger.Info)
 
-	log.Println("running migrations")
-	DB.AutoMigrate(&Fact{}, &User{}, &Message{})
+	zapLogger.Log.Info("Running migrations")
+	err = DB.AutoMigrate(&User{}, &Message{})
+	if err != nil {
+		zapLogger.Log.Error("Failed to migrate", zap.Error(err))
+		return err
+	}
+
+	return nil
 }
