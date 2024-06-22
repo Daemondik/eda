@@ -18,15 +18,17 @@ import (
 type SMSResponse struct {
 	Status     string `json:"status"`
 	StatusCode int    `json:"status_code"`
-	SMS        []SMS
+	SMS        map[string]SMSData
 	Balance    float64 `json:"balance"`
 }
 
-type SMS struct {
+type SMSData struct {
 	Status     string `json:"status"`
 	StatusCode int    `json:"status_code"`
 	SMSId      string `json:"sms_id"`
 	StatusText string `json:"status_text"`
+	Cost       string `json:"cost"`
+	SMSCount   int    `json:"sms"`
 }
 
 const SMSStatusOk = "OK"
@@ -34,14 +36,12 @@ const SMSStatusError = "ERROR"
 
 func CurrentUser(c *gin.Context) {
 	userId, err := security.GetUserIdByJWTOrOauth(c)
-
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	u, err := models.GetUserByID(userId)
-
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -66,7 +66,7 @@ func Login(c *gin.Context) {
 	u := models.User{}
 
 	if phoneValid := security.IsValidRussianPhoneNumber(input.Phone); !phoneValid {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "phone should be format +7 (XXX) XXX-XX-XX"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "phone should be format 7XXXXXXXXXX"})
 		return
 	}
 	u.Phone = input.Phone
@@ -88,7 +88,6 @@ type RegisterInput struct {
 }
 
 func Register(c *gin.Context) {
-
 	var input RegisterInput
 	var err error
 
@@ -100,7 +99,7 @@ func Register(c *gin.Context) {
 	u := models.User{}
 
 	if phoneValid := security.IsValidRussianPhoneNumber(input.Phone); !phoneValid {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "phone should be format +7 (XXX) XXX-XX-XX"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "phone should be format 7XXXXXXXXXX"})
 		return
 	}
 
@@ -111,7 +110,7 @@ func Register(c *gin.Context) {
 	}
 	code := n.Int64() + 1000
 
-	url := fmt.Sprintf("https://sms.ru/sms/send?api_id=%s&to=%s&msg=Code: %d&json=1&test=%s", os.Getenv("SMS_API_KEY"), input.Phone, code, os.Getenv("SMS_IS_TEST"))
+	url := fmt.Sprintf("https://sms.ru/sms/send?api_id=%s&to=%s&msg=Code:+%d&json=1&test=%s", os.Getenv("SMS_API_KEY"), input.Phone, code, os.Getenv("SMS_IS_TEST"))
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -130,12 +129,12 @@ func Register(c *gin.Context) {
 
 	err = json.Unmarshal(body, &smsResponse)
 	if err != nil {
-		c.String(http.StatusInternalServerError, fmt.Sprintf("unmarshal error: %s", err.Error()))
+		c.String(http.StatusInternalServerError, fmt.Sprintf("unmarshal error: %s, %s, %s", err.Error(), body, url))
 		return
 	}
 
 	if smsResponse.Status == SMSStatusError {
-		c.String(http.StatusBadRequest, fmt.Sprintf("unmarshal error: %s", smsResponse.SMS[0].StatusText))
+		c.String(http.StatusBadRequest, fmt.Sprintf("SMS response error: %s", smsResponse.SMS[input.Phone].StatusText))
 		return
 	}
 
@@ -171,24 +170,24 @@ func ConfirmSMSCode(c *gin.Context) {
 	currentCode, err := models.GetDelPhoneTransaction(input.Phone)
 	if err != nil {
 		logger.Log.Error("get code: " + err.Error() + "\n")
-		c.AbortWithError(http.StatusInternalServerError, err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if input.Code != currentCode {
-		c.String(http.StatusInternalServerError, "incorrect code")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "incorrect code"})
 		return
 	}
 
 	u, err := models.GetUserByPhone(input.Phone)
 	if err != nil {
 		logger.Log.Error("User Exist: " + err.Error() + "\n")
-		c.AbortWithError(http.StatusBadRequest, err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	_, err = u.SetActive()
 	if err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 

@@ -1,3 +1,18 @@
+root = "."
+tmp_dir = "tmp"
 [build]
-cmd = "go build -o ./tmp/main ./cmd"
-poll = true
+  cmd = "go build -o ./tmp/main ./cmd"
+  bin = "tmp/main"
+  full_bin = "APP_ENV=dev APP_NAME=air ./tmp/main"
+  include_ext = ["go", "tpl", "tmpl", "html"]
+  exclude_dir = ["assets", "tmp", "vendor", "frontend"]
+  exclude_file = ["go.sum"]
+  follow_symlink = true
+  dir = "."
+  poll = true
+  poll_interval = 500
+
+[log]
+  level = "debug"
+  color = true
+  time = true

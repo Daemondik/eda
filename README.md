@@ -23,7 +23,7 @@ docker-compose up --build
 ```bash
 GET localhost:8080/api/login-gl
 ```
-После авторизации вы получите cookie `access_token`, который позволит вам обращаться к `/api/admin/`.
+После авторизации вы получите cookie `access_token`, который позволит вам обращаться к `/api/admin/`, при условии, что ваша `role` в таблице `users` = `admin`.
 
 Для регистрации через номер телефона отправьте запрос на:
 
@@ -34,7 +34,7 @@ POST localhost:8080/api/register
 
 ```bash
 {
-    "email": "your_email@example.com",
+    "phone": "7XXXXXXXXXX",
     "password": "your_password"
 }
 ```
@@ -47,10 +47,27 @@ POST localhost:8080/api/confirm-sms
 
 ```bash
 {
-    "phone": "your_phone_number",
+    "phone": "7XXXXXXXXXX",
     "code": your_code
 }
 ```
+
+Для входа через номер телефона отправьте запрос на:
+
+```bash
+POST localhost:8080/api/login
+```
+с таким телом запроса:
+
+```bash
+{
+    "phone": "7XXXXXXXXXX",
+    "password": "your_password"
+}
+```
+
+В результате вы получите `token` для авторизации. Используйте его при POST и GET запросах.
+Вы можете передать в `Headers` ключ `Authorization` с параметром `Bearer <token>`
 
 ### Чат в реальном времени на Websocket & RabbitMQ
 
@@ -59,7 +76,7 @@ POST localhost:8080/api/confirm-sms
 
 ### Go Sql модуль
 
-При сборке приложения скрипт читает все sql запросы из директории `sql` и выполняет их 
+При сборке приложения скрипт выполняет триггеры из директории `sql/triggers` и отслеживает, изменились ли они с момента последней сборки. Если изменились, то выполняет их
 
 ### Unit-тесты
 

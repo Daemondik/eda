@@ -2,6 +2,8 @@ package models
 
 import (
 	"eda/logger"
+	"errors"
+	"fmt"
 	"github.com/go-redis/redis"
 	"go.uber.org/zap"
 	"os"
@@ -36,8 +38,7 @@ func NewRedis() error {
 func GetDelPhoneTransaction(phone string) (string, error) {
 	pipe := RedisClient.TxPipeline()
 
-	currentCode := pipe.Get(phone)
-
+	currentCodeCmd := pipe.Get(phone)
 	pipe.Del(phone)
 
 	_, err := pipe.Exec()
@@ -45,8 +46,10 @@ func GetDelPhoneTransaction(phone string) (string, error) {
 		return "", err
 	}
 
-	code, err := currentCode.Result()
-	if err != nil {
+	code, err := currentCodeCmd.Result()
+	if errors.Is(err, redis.Nil) {
+		return "", fmt.Errorf("no code found for phone: %s", phone)
+	} else if err != nil {
 		return "", err
 	}
 

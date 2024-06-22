@@ -32,7 +32,7 @@ func GetUserByID(uid uint) (User, error) {
 
 func GetUserByEmail(email string) (User, error) {
 	var u User
-	err := DB.Model(User{}).Where("email = ? AND is_active = true", email).Find(&u).Error
+	err := DB.Model(User{}).Where("email = ?", email).Find(&u).Error
 	if err != nil {
 		return u, errors.New("user not found")
 	}
@@ -42,9 +42,12 @@ func GetUserByEmail(email string) (User, error) {
 
 func GetUserByPhone(phone string) (User, error) {
 	var u User
-	err := DB.Model(User{}).Where("phone = ? AND is_active = true", phone).Find(&u).Error
+	err := DB.Where("phone = ?", phone).First(&u).Error
 	if err != nil {
-		return u, errors.New("user not found")
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return u, errors.New("user not found")
+		}
+		return u, err
 	}
 
 	return u, nil
@@ -72,8 +75,7 @@ func (u *User) SaveUser() (User, error) {
 }
 
 func (u *User) SetActive() (User, error) {
-	var err error
-	err = DB.Model(User{}).Update("is_active", true).Error
+	err := DB.Model(u).Where("id = ?", u.ID).Update("is_active", true).Error
 	if err != nil {
 		return User{}, err
 	}

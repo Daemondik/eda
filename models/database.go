@@ -12,6 +12,12 @@ import (
 
 var DB *gorm.DB
 
+type ScriptExecutions struct {
+	gorm.Model
+	ScriptName string `json:"script_name" gorm:"text"`
+	ScriptHash string `json:"script_hash" gorm:"text"`
+}
+
 func ConnectDb() error {
 	dsn := fmt.Sprintf(
 		"host=db user=%s password=%s dbname=%s port=5432 sslmode=disable TimeZone=Europe/moscow",
@@ -33,7 +39,7 @@ func ConnectDb() error {
 	DB.Logger = logger.Default.LogMode(logger.Info)
 
 	zapLogger.Log.Info("Running migrations")
-	err = DB.AutoMigrate(&User{}, &Message{})
+	err = DB.AutoMigrate(&ScriptExecutions{}, &User{}, &Message{})
 	if err != nil {
 		zapLogger.Log.Error("Failed to migrate", zap.Error(err))
 		return err

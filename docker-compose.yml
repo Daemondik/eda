@@ -73,7 +73,7 @@ services:
       - "8080:8080"
     volumes:
       - .:/app
-    command: sh -c "cd /app/cmd && air"
+      - ./cmd:/app/cmd
     depends_on:
       redis:
         condition: service_healthy
@@ -104,7 +104,7 @@ services:
       - "8082:8082"
     volumes:
       - .:/app
-    command: sh -c "cd /app/cmd/sql && air"
+    command: sh -c "cd /app/cmd/sql && go run main.go"
     depends_on:
       db:
         condition: service_healthy

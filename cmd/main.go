@@ -48,7 +48,7 @@ func setupRouter() *gin.Engine {
 	ws := r.Group("/ws")
 	setupWebsocketRoutes(ws)
 
-	r.LoadHTMLGlob("../front/templates/*")
+	r.LoadHTMLGlob("front/templates/*")
 	front := r.Group("/")
 	setupFrontRoutes(front)
 
