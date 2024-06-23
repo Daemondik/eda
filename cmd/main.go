@@ -42,7 +42,7 @@ func setupRouter() *gin.Engine {
 	setupApiRoutes(public)
 
 	protected := r.Group("/api/admin")
-	protected.Use(middlewares.AuthMiddleware(models.RoleAdmin))
+	protected.Use(middlewares.AuthMiddleware(models.Admin))
 	setupApiAdminRoutes(protected)
 
 	ws := r.Group("/ws")

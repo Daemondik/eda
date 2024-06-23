@@ -11,7 +11,7 @@ import (
 	"strconv"
 )
 
-func AuthMiddleware(role string) gin.HandlerFunc {
+func AuthMiddleware(role models.Role) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var userId uint
 		var err error

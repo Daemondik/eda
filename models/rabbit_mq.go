@@ -13,11 +13,10 @@ var (
 
 const ChatQueue = "chat"
 
-// Инициализация соединения с RabbitMQ
 func initRabbitMQ() {
 	conn, connErr = amqp.Dial("amqp://admin:admin@rabbitmq/")
 	if connErr != nil {
-		panic(connErr) // Обработайте ошибку соединения здесь
+		panic(connErr)
 	}
 }
 

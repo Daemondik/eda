@@ -8,16 +8,20 @@ import (
 	"strings"
 )
 
-const RoleAdmin = "admin"
-const RoleModer = "moder"
-const RoleGuest = "guest"
+type Role string
+
+const (
+	Admin     Role = "admin"
+	Moderator Role = "moderator"
+	Guest     Role = "guest"
+)
 
 type User struct {
 	gorm.Model
 	Phone    string `json:"phone" gorm:"text"`
 	Email    string `json:"email" gorm:"text"`
 	Password string `json:"password" gorm:"text;size:255"`
-	Role     string `json:"role" gorm:"text;not null;default:'guest'"`
+	Role     Role   `json:"role" gorm:"type:enum('admin', 'moderator', 'guest');not null;default:'guest'"`
 	IsActive bool   `json:"is_active" gorm:"bool;not null;default:false"`
 }
 
@@ -53,7 +57,7 @@ func GetUserByPhone(phone string) (User, error) {
 	return u, nil
 }
 
-func GetUserRoleById(uid uint) (string, error) {
+func GetUserRoleById(uid uint) (Role, error) {
 	var u User
 	if err := DB.First(&u, uid).Error; err != nil {
 		return "", errors.New("user not found")
