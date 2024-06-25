@@ -94,6 +94,29 @@ services:
       - .:/app
     command: sh -c "cd /app && go test ./..."
 
+  auth:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile-auth-server
+    env_file:
+      - .env
+    ports:
+      - "50051:50051"
+    volumes:
+      - .:/app
+      - ./cmd:/app/cmd
+      - ./server.crt:/app/server.crt
+      - ./server.key:/app/server.key
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      pdadmin:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+
   go_sql:
     build:
       context: .

@@ -101,19 +101,28 @@ func VerifyPassword(password, hashedPassword string) error {
 }
 
 func LoginCheck(phone string, password string) (string, error) {
-	var err error
 	u := User{}
-	err = DB.Model(User{}).Where("phone = ?", phone).Take(&u).Error
+	err := DB.Model(User{}).Where("phone = ? AND is_active = true", phone).Take(&u).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", errors.New("user not found")
+		}
 		return "", err
 	}
+
 	err = VerifyPassword(password, u.Password)
-	if err != nil && errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
+	if err != nil {
+		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
+			return "", errors.New("incorrect password")
+		}
 		return "", err
 	}
+
 	generatedToken, err := token.GenerateToken(u.ID)
 	if err != nil {
+		// Ошибка при генерации токена
 		return "", err
 	}
+
 	return generatedToken, nil
 }

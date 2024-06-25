@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	if err := initializeServices(); err != nil {
+	if err := models.InitializeServices(); err != nil {
 		logger.Log.Fatal("Failed to initialize services: ", zap.Error(err))
 	}
 
@@ -17,22 +17,6 @@ func main() {
 	if err := r.Run(); err != nil {
 		logger.Log.Fatal("Failed to run the server:", zap.Error(err))
 	}
-}
-
-func initializeServices() error {
-	if err := logger.InitializeZapCustomLogger(); err != nil {
-		return err
-	}
-
-	if err := models.ConnectDb(); err != nil {
-		return err
-	}
-
-	if err := models.NewRedis(); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func setupRouter() *gin.Engine {

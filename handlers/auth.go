@@ -1,38 +1,18 @@
 package handlers
 
 import (
-	"crypto/rand"
+	"context"
+	pb "eda/internal/auth"
 	"eda/logger"
 	"eda/models"
 	"eda/utils/security"
-	"encoding/json"
-	"fmt"
 	"github.com/gin-gonic/gin"
-	"io"
-	"math/big"
+	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"net/http"
 	"os"
-	"time"
 )
-
-type SMSResponse struct {
-	Status     string `json:"status"`
-	StatusCode int    `json:"status_code"`
-	SMS        map[string]SMSData
-	Balance    float64 `json:"balance"`
-}
-
-type SMSData struct {
-	Status     string `json:"status"`
-	StatusCode int    `json:"status_code"`
-	SMSId      string `json:"sms_id"`
-	StatusText string `json:"status_text"`
-	Cost       string `json:"cost"`
-	SMSCount   int    `json:"sms"`
-}
-
-const SMSStatusOk = "OK"
-const SMSStatusError = "ERROR"
 
 func CurrentUser(c *gin.Context) {
 	userId, err := security.GetUserIdByJWTOrOauth(c)
@@ -50,45 +30,53 @@ func CurrentUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "success", "data": u})
 }
 
-type LoginInput struct {
-	Phone    string `json:"phone" binding:"required"`
-	Password string `json:"password" binding:"required"`
+func createGRPCClient() (pb.AuthServiceClient, func(), error) {
+	certFile := os.Getenv("CERT_FILE")
+	creds, err := credentials.NewClientTLSFromFile(certFile, "")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	conn, err := grpc.Dial("host.docker.internal:50051", grpc.WithTransportCredentials(creds))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	client := pb.NewAuthServiceClient(conn)
+	return client, func() { conn.Close() }, nil
 }
 
 func Login(c *gin.Context) {
-	var input LoginInput
+	var input models.LoginInput
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
 
-	u := models.User{}
-
-	if phoneValid := security.IsValidRussianPhoneNumber(input.Phone); !phoneValid {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "phone should be format 7XXXXXXXXXX"})
-		return
-	}
-	u.Phone = input.Phone
-	u.Password = input.Password
-
-	generatedToken, err := models.LoginCheck(u.Phone, u.Password)
-
+	client, closeConn, err := createGRPCClient()
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "phone or password is incorrect."})
+		logger.Log.Error("Failed to create gRPC client", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to connect to gRPC server"})
+		return
+	}
+	defer closeConn()
+
+	response, err := client.Login(c, &pb.LoginRequest{
+		Phone:    input.Phone,
+		Password: input.Password,
+	})
+	if err != nil {
+		logger.Log.Error("Authentication failed", zap.Error(err))
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication failed"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"token": generatedToken})
-}
-
-type RegisterInput struct {
-	Phone    string `json:"phone" binding:"required"`
-	Password string `json:"password" binding:"required"`
+	c.JSON(http.StatusOK, gin.H{"token": response.Token})
 }
 
 func Register(c *gin.Context) {
-	var input RegisterInput
+	var input models.RegisterInput
 	var err error
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -96,70 +84,27 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	u := models.User{}
-
-	if phoneValid := security.IsValidRussianPhoneNumber(input.Phone); !phoneValid {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "phone should be format 7XXXXXXXXXX"})
-		return
-	}
-
-	n, err := rand.Int(rand.Reader, big.NewInt(9000))
+	client, closeConn, err := createGRPCClient()
 	if err != nil {
-		c.String(http.StatusInternalServerError, fmt.Sprintf("code generation error: %s", err.Error()))
+		logger.Log.Error("Failed to create gRPC client", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to connect to gRPC server"})
 		return
 	}
-	code := n.Int64() + 1000
+	defer closeConn()
 
-	url := fmt.Sprintf("https://sms.ru/sms/send?api_id=%s&to=%s&msg=Code:+%d&json=1&test=%s", os.Getenv("SMS_API_KEY"), input.Phone, code, os.Getenv("SMS_IS_TEST"))
-
-	resp, err := http.Get(url)
+	_, err = client.Register(context.Background(), &pb.RegisterRequest{
+		Phone:    input.Phone,
+		Password: input.Password,
+	})
 	if err != nil {
-		c.String(http.StatusInternalServerError, fmt.Sprintf("sending error: %s", err.Error()))
+		logger.Log.Error("Register failed", zap.Error(err))
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Register failed"})
 		return
 	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		c.String(http.StatusInternalServerError, fmt.Sprintf("response error: %s", err.Error()))
-		return
-	}
-
-	var smsResponse SMSResponse
-
-	err = json.Unmarshal(body, &smsResponse)
-	if err != nil {
-		c.String(http.StatusInternalServerError, fmt.Sprintf("unmarshal error: %s, %s, %s", err.Error(), body, url))
-		return
-	}
-
-	if smsResponse.Status == SMSStatusError {
-		c.String(http.StatusBadRequest, fmt.Sprintf("SMS response error: %s", smsResponse.SMS[input.Phone].StatusText))
-		return
-	}
-
-	u.Phone = input.Phone
-	u.Password = input.Password
-	u.IsActive = false
-
-	_, err = u.SaveUser()
-
-	expiration := time.Now().Add(time.Hour)
-	models.RedisClient.Set(u.Phone, code, expiration.Sub(time.Now()))
-
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-}
-
-type ConfirmSMSCodeInput struct {
-	Phone string `json:"phone" binding:"required"`
-	Code  string `json:"code" binding:"required"`
 }
 
 func ConfirmSMSCode(c *gin.Context) {
-	var input ConfirmSMSCodeInput
+	var input models.ConfirmSMSCodeInput
 	var err error
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -167,27 +112,21 @@ func ConfirmSMSCode(c *gin.Context) {
 		return
 	}
 
-	currentCode, err := models.GetDelPhoneTransaction(input.Phone)
+	client, closeConn, err := createGRPCClient()
 	if err != nil {
-		logger.Log.Error("get code: " + err.Error() + "\n")
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		logger.Log.Error("Failed to create gRPC client", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to connect to gRPC server"})
 		return
 	}
+	defer closeConn()
 
-	if input.Code != currentCode {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "incorrect code"})
-		return
-	}
-
-	u, err := models.GetUserByPhone(input.Phone)
+	_, err = client.ConfirmSMSCode(context.Background(), &pb.ConfirmSMSCodeRequest{
+		Phone: input.Phone,
+		Code:  input.Code,
+	})
 	if err != nil {
-		logger.Log.Error("User Exist: " + err.Error() + "\n")
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	_, err = u.SetActive()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		logger.Log.Error("Register failed", zap.Error(err))
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Register failed"})
 		return
 	}
 

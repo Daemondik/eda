@@ -1,0 +1,16 @@
+FROM golang:latest
+
+RUN go install github.com/air-verse/air@latest
+
+WORKDIR /app
+
+COPY server.crt /app/server.crt
+COPY server.key /app/server.key
+
+COPY . .
+
+RUN go mod download
+
+RUN go mod tidy
+
+CMD ["air", "-c", "auth.air.toml"]
