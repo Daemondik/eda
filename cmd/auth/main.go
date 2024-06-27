@@ -3,21 +3,20 @@ package main
 import (
 	"context"
 	"crypto/rand"
+	"eda/internal/sms"
 	"eda/logger"
 	"eda/models"
 	"eda/utils/security"
-	"encoding/json"
 	"fmt"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
-	"io"
 	"math/big"
 	"net"
-	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"time"
 
 	pb "eda/internal/auth"
@@ -25,10 +24,8 @@ import (
 )
 
 type Config struct {
-	SMSAPIKey string
-	SMSIsTest string
-	CertFile  string
-	KeyFile   string
+	CertFile string
+	KeyFile  string
 }
 
 type server struct {
@@ -36,31 +33,10 @@ type server struct {
 	config *Config
 }
 
-type SMSResponse struct {
-	Status     string `json:"status"`
-	StatusCode int    `json:"status_code"`
-	SMS        map[string]SMSData
-	Balance    float64 `json:"balance"`
-}
-
-type SMSData struct {
-	Status     string `json:"status"`
-	StatusCode int    `json:"status_code"`
-	SMSId      string `json:"sms_id"`
-	StatusText string `json:"status_text"`
-	Cost       string `json:"cost"`
-	SMSCount   int    `json:"sms"`
-}
-
-const SMSStatusOk = "OK"
-const SMSStatusError = "ERROR"
-
 func NewConfig() *Config {
 	return &Config{
-		SMSAPIKey: os.Getenv("SMS_API_KEY"),
-		SMSIsTest: os.Getenv("SMS_IS_TEST"),
-		CertFile:  os.Getenv("CERT_FILE"),
-		KeyFile:   os.Getenv("KEY_FILE"),
+		CertFile: os.Getenv("CERT_FILE"),
+		KeyFile:  os.Getenv("KEY_FILE"),
 	}
 }
 
@@ -113,8 +89,9 @@ func (s *server) Register(ctx context.Context, in *pb.RegisterRequest) (*pb.Regi
 	}
 	code := n.Int64() + 1000
 
-	// Отправка SMS.
-	err = sendSMS(u.Phone, code, s.config)
+	// Отправка SMS кода
+	smsSender := sms.NewSMSruSender()
+	err = smsSender.SendSMSCode(u.Phone, strconv.FormatInt(code, 10))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "sending error: %s", err.Error())
 	}
@@ -130,35 +107,6 @@ func (s *server) Register(ctx context.Context, in *pb.RegisterRequest) (*pb.Regi
 	models.RedisClient.Set(u.Phone, code, expiration.Sub(time.Now()))
 
 	return &pb.RegisterResponse{}, nil
-}
-
-// sendSMS - вспомогательная функция для отправки SMS.
-func sendSMS(phone string, code int64, config *Config) error {
-	url := fmt.Sprintf("https://sms.ru/sms/send?api_id=%s&to=%s&msg=Code:+%d&json=1&test=%s", config.SMSAPIKey, phone, code, config.SMSIsTest)
-
-	resp, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	// Обработка ответа от SMS-сервиса.
-	var smsResponse SMSResponse
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	err = json.Unmarshal(body, &smsResponse)
-	if err != nil {
-		return err
-	}
-
-	if smsResponse.Status == SMSStatusError {
-		return fmt.Errorf("SMS response error: %s", smsResponse.SMS[phone].StatusText)
-	}
-
-	return nil
 }
 
 // ConfirmSMSCode - gRPC метод для подтверждения SMS-кода.
